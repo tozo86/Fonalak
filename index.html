@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DROPS Saga fonalak – rendezhető</title>
+<style>
+:root{--bg:#fff;--fg:#222;--mut:#777;--line:#ddd;--acc:#2a6f6b}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1c1c;--fg:#eee;--mut:#999;--line:#3a3a3a;--acc:#5fb8b2}}
+body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:15px/1.4 Georgia,serif}
+h1{font-size:18px;margin:0;padding:8px 6px 0}
+p.s{color:var(--mut);margin:0;padding:0 6px 6px;font-size:12px}
+.bar{display:flex;gap:6px;flex-wrap:wrap;padding:0 6px 8px}
+button{font:inherit;font-size:13px;padding:5px 10px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+#msg{color:var(--acc);align-self:center}
+#grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0}
+.c{border:0;padding:0;overflow:hidden;text-align:center;cursor:grab;position:relative;background:var(--bg)}
+.c img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--line);pointer-events:none}
+.n{display:block;padding:2px 1px 4px;font-weight:bold;font-size:clamp(11px,3.2vw,16px);line-height:1.1}
+.t{display:none}
+.pos{position:absolute;top:2px;left:2px;background:var(--bg);color:var(--fg);border:1px solid var(--line);font-size:clamp(7px,2vw,11px);padding:0 4px;border-radius:8px}
+.ghost{opacity:.35}
+.chosen{outline:2px solid var(--acc);outline-offset:-2px}
+</style></head><body>
+<h1>DROPS Saga</h1>
+<p class="s">100% gyapjú, 50 g / 100 m, 4 mm tű. Húzd a fonalakat a helyükre, a sorrend elmentődik.</p>
+<div class="bar">
+<button id="reset">Eredeti sorrend</button>
+<button id="copy">Sorrend másolása</button>
+<span id="msg" role="status"></span>
+</div>
+<div id="grid"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script>
+const DATA=[{"id": "m03", "type": "Mix", "num": "03", "name": "Nyír"}, {"id": "m04", "type": "Mix", "num": "04", "name": "Szürke suttogás"}, {"id": "m05", "type": "Mix", "num": "05", "name": "Kőszürke"}, {"id": "m06", "type": "Mix", "num": "06", "name": "Hamuszürke"}, {"id": "m07", "type": "Mix", "num": "07", "name": "Szén"}, {"id": "m08", "type": "Mix", "num": "08", "name": "Fagyos levendula"}, {"id": "m09", "type": "Mix", "num": "09", "name": "Búza"}, {"id": "m10", "type": "Mix", "num": "10", "name": "Bézs"}, {"id": "m11", "type": "Mix", "num": "11", "name": "Tollszürke"}, {"id": "m12", "type": "Mix", "num": "12", "name": "Nugát"}, {"id": "m13", "type": "Mix", "num": "13", "name": "Mandula"}, {"id": "m14", "type": "Mix", "num": "14", "name": "Téli kéreg"}, {"id": "m16", "type": "Mix", "num": "16", "name": "Kávé"}, {"id": "m17", "type": "Mix", "num": "17", "name": "Levendula szürke"}, {"id": "m19", "type": "Mix", "num": "19", "name": "Bíborvörös"}, {"id": "m20", "type": "Mix", "num": "20", "name": "Cseresznye dzsem"}, {"id": "m21", "type": "Mix", "num": "21", "name": "Szilvabor"}, {"id": "m22", "type": "Mix", "num": "22", "name": "Sötét szőlő"}, {"id": "m23", "type": "Mix", "num": "23", "name": "Rozsda"}, {"id": "m25", "type": "Mix", "num": "25", "name": "Mahagóni"}, {"id": "m26", "type": "Mix", "num": "26", "name": "Halvány menta"}, {"id": "m28", "type": "Mix", "num": "28", "name": "Kék kő"}, {"id": "m30", "type": "Mix", "num": "30", "name": "Viharkék"}, {"id": "m31", "type": "Mix", "num": "31", "name": "Sötét tengerészkék"}, {"id": "m32", "type": "Mix", "num": "32", "name": "Rózsaszín márvány"}, {"id": "m33", "type": "Mix", "num": "33", "name": "Púderrózsaszín"}, {"id": "m34", "type": "Mix", "num": "34", "name": "Lime hab"}, {"id": "m35", "type": "Mix", "num": "35", "name": "Szárított gyógynövény"}, {"id": "m36", "type": "Mix", "num": "36", "name": "Mohazöld"}, {"id": "m38", "type": "Mix", "num": "38", "name": "Olívaolaj"}, {"id": "m39", "type": "Mix", "num": "39", "name": "Mohabarna"}, {"id": "m40", "type": "Mix", "num": "40", "name": "Mély moha"}, {"id": "m41", "type": "Mix", "num": "41", "name": "Vad orchidea"}, {"id": "m42", "type": "Mix", "num": "42", "name": "Cayenne"}, {"id": "m43", "type": "Mix", "num": "43", "name": "Paprika"}, {"id": "m45", "type": "Mix", "num": "45", "name": "Tengerészkék"}, {"id": "u01", "type": "Uni Colour", "num": "01", "name": "Törtfehér"}, {"id": "u02", "type": "Uni Colour", "num": "02", "name": "Fekete"}, {"id": "u15", "type": "Uni Colour", "num": "15", "name": "Csokoládé"}, {"id": "u18", "type": "Uni Colour", "num": "18", "name": "Aranyvessző"}, {"id": "u24", "type": "Uni Colour", "num": "24", "name": "Magyalbogyó"}, {"id": "u27", "type": "Uni Colour", "num": "27", "name": "Púderkék"}, {"id": "u29", "type": "Uni Colour", "num": "29", "name": "Éjféli árnyék"}, {"id": "u37", "type": "Uni Colour", "num": "37", "name": "Sötét erdő"}, {"id": "u44", "type": "Uni Colour", "num": "44", "name": "Élénk piros"}];
+const KEY="saga-order-v1";
+const byId=Object.fromEntries(DATA.map(d=>[d.id,d]));
+const grid=document.getElementById("grid");
+const msg=document.getElementById("msg");
+function loadOrder(){
+  try{const s=JSON.parse(localStorage.getItem(KEY));
+    if(Array.isArray(s)){const ok=s.filter(i=>byId[i]);const rest=DATA.map(d=>d.id).filter(i=>!ok.includes(i));return ok.concat(rest);}
+  }catch(e){}
+  return DATA.map(d=>d.id);
+}
+function saveOrder(){
+  try{localStorage.setItem(KEY,JSON.stringify(currentOrder()));}catch(e){}
+}
+function currentOrder(){return [...grid.children].map(c=>c.dataset.id);}
+function numberCells(){[...grid.children].forEach((c,i)=>c.querySelector(".pos").textContent=i+1);}
+function cell(d){
+  const el=document.createElement("div");el.className="c";el.dataset.id=d.id;
+  const img=document.createElement("img");img.loading="lazy";img.width=214;img.height=214;
+  img.src="https://nordfonal.cdn.shoprenter.hu/custom/nordfonal/image/cache/w214h214/product/saga/"+d.num+".jpg.webp";
+  img.alt="DROPS Saga "+d.type+" "+d.num+" - "+d.name;
+  const pos=document.createElement("span");pos.className="pos";
+  const n=document.createElement("span");n.className="n";n.textContent=d.num;
+  const t=document.createElement("span");t.className="t";t.textContent=d.type;
+  el.append(img,pos,n,t);return el;
+}
+function render(order){grid.innerHTML="";order.forEach(i=>grid.appendChild(cell(byId[i])));numberCells();}
+render(loadOrder());
+new Sortable(grid,{animation:150,ghostClass:"ghost",chosenClass:"chosen",delay:120,delayOnTouchOnly:true,
+  onEnd(){numberCells();saveOrder();}});
+function flash(t){msg.textContent=t;setTimeout(()=>msg.textContent="",2500);}
+document.getElementById("reset").onclick=()=>{render(DATA.map(d=>d.id));saveOrder();flash("Visszaállítva");};
+document.getElementById("copy").onclick=async()=>{
+  const txt=currentOrder().map((id,i)=>{const d=byId[id];return (i+1)+". "+d.type+" "+d.num+" – "+d.name;}).join("\n");
+  try{await navigator.clipboard.writeText(txt);flash("Kimásolva");}catch(e){flash("A másolás nem sikerült");}
+};
+</script></body></html>

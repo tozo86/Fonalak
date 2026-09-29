@@ -2,89 +2,194 @@
 <html lang="hu"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DROPS Saga fonalak – rendezhető</title>
 <style>
-:root{--bg:#fff;--fg:#222;--mut:#777;--line:#ddd;--acc:#2a6f6b}
+:root{--bg:#fff;--fg:#222;--mut:#777;--line:#d8d8d8;--acc:#2a6f6b}
 @media (prefers-color-scheme:dark){:root{--bg:#1c1c1c;--fg:#eee;--mut:#999;--line:#3a3a3a;--acc:#5fb8b2}}
 body{margin:0;padding:0;background:var(--bg);color:var(--fg);font:15px/1.4 Georgia,serif}
+body.dragging{user-select:none;-webkit-user-select:none}
 h1{font-size:18px;margin:0;padding:8px 6px 0}
 p.s{color:var(--mut);margin:0;padding:0 6px 6px;font-size:12px}
 .bar{display:flex;gap:6px;flex-wrap:wrap;padding:0 6px 8px}
 button{font:inherit;font-size:13px;padding:5px 10px;border:1px solid var(--line);background:transparent;color:var(--fg);border-radius:6px;cursor:pointer}
 button:hover{border-color:var(--acc)}
-#msg{color:var(--acc);align-self:center}
-#grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0}
-.c{border:0;padding:0;overflow:hidden;text-align:center;cursor:grab;position:relative;background:var(--bg)}
+#msg{color:var(--acc);align-self:center;font-size:13px}
+.lbl{color:var(--mut);font-size:12px;padding:8px 6px 2px}
+.zone{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0}
+.slot{position:relative;box-shadow:inset 0 0 0 .5px var(--line)}
+.slot::before{content:"";display:block;padding-top:calc(100% + 24px)}
+.slot.over{box-shadow:inset 0 0 0 3px var(--acc);background:rgba(42,111,107,.12)}
+.c{position:absolute;inset:0;cursor:grab;background:var(--bg);text-align:center;overflow:hidden;
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .c img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--line);pointer-events:none}
-.n{display:block;padding:2px 1px 4px;font-weight:bold;font-size:clamp(11px,3.2vw,16px);line-height:1.1}
-.t{display:none}
+.n{display:block;padding:2px 1px 0;font-weight:bold;font-size:clamp(11px,3.2vw,16px);line-height:1.1}
 .pos{position:absolute;top:2px;left:2px;background:var(--bg);color:var(--fg);border:1px solid var(--line);font-size:clamp(7px,2vw,11px);padding:0 4px;border-radius:8px}
-.ghost{opacity:.35}
-.chosen{outline:2px solid var(--acc);outline-offset:-2px}
-#buf{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;align-content:start;min-height:calc(3*(20vw + 24px));margin:10px 0 0;border-top:2px dashed var(--line);background:repeating-linear-gradient(0deg,transparent 0,transparent calc(20vw + 23px),var(--line) calc(20vw + 23px),var(--line) calc(20vw + 24px))}
-.lbl{color:var(--mut);font-size:12px;padding:4px 6px 0}
-#buf .pos{display:none}
+.nopos .pos{display:none}
+.c.src{opacity:.3}
+.c.float{position:fixed;inset:auto;z-index:1000;pointer-events:none;opacity:.9;box-shadow:0 6px 18px rgba(0,0,0,.35);cursor:grabbing}
 </style></head><body>
 <h1>DROPS Saga</h1>
-<p class="s">100% gyapjú, 50 g / 100 m, 4 mm tű. Húzd a fonalakat a helyükre, a sorrend elmentődik.</p>
+<p class="s">Húzd a fonalakat a helyükre. Üres helyre is húzhatod, foglalt helyen felcserélődik. A sorrend elmentődik.</p>
 <div class="bar">
 <button id="reset">Eredeti sorrend</button>
 <button id="copy">Sorrend másolása</button>
 <span id="msg" role="status"></span>
 </div>
-<div id="grid"></div>
-<div class="lbl">Puffer – ide húzhatod át ideiglenesen a fonalakat</div>
-<div id="buf"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<div class="lbl">Puffer (fent)</div>
+<div id="top" class="zone"></div>
+<div class="lbl">Fő rács</div>
+<div id="main" class="zone"></div>
+<div class="lbl">Puffer (lent)</div>
+<div id="bot" class="zone"></div>
 <script>
 const DATA=[{"id": "m03", "type": "Mix", "num": "03", "name": "Nyír"}, {"id": "m04", "type": "Mix", "num": "04", "name": "Szürke suttogás"}, {"id": "m05", "type": "Mix", "num": "05", "name": "Kőszürke"}, {"id": "m06", "type": "Mix", "num": "06", "name": "Hamuszürke"}, {"id": "m07", "type": "Mix", "num": "07", "name": "Szén"}, {"id": "m08", "type": "Mix", "num": "08", "name": "Fagyos levendula"}, {"id": "m09", "type": "Mix", "num": "09", "name": "Búza"}, {"id": "m10", "type": "Mix", "num": "10", "name": "Bézs"}, {"id": "m11", "type": "Mix", "num": "11", "name": "Tollszürke"}, {"id": "m12", "type": "Mix", "num": "12", "name": "Nugát"}, {"id": "m13", "type": "Mix", "num": "13", "name": "Mandula"}, {"id": "m14", "type": "Mix", "num": "14", "name": "Téli kéreg"}, {"id": "m16", "type": "Mix", "num": "16", "name": "Kávé"}, {"id": "m17", "type": "Mix", "num": "17", "name": "Levendula szürke"}, {"id": "m19", "type": "Mix", "num": "19", "name": "Bíborvörös"}, {"id": "m20", "type": "Mix", "num": "20", "name": "Cseresznye dzsem"}, {"id": "m21", "type": "Mix", "num": "21", "name": "Szilvabor"}, {"id": "m22", "type": "Mix", "num": "22", "name": "Sötét szőlő"}, {"id": "m23", "type": "Mix", "num": "23", "name": "Rozsda"}, {"id": "m25", "type": "Mix", "num": "25", "name": "Mahagóni"}, {"id": "m26", "type": "Mix", "num": "26", "name": "Halvány menta"}, {"id": "m28", "type": "Mix", "num": "28", "name": "Kék kő"}, {"id": "m30", "type": "Mix", "num": "30", "name": "Viharkék"}, {"id": "m31", "type": "Mix", "num": "31", "name": "Sötét tengerészkék"}, {"id": "m32", "type": "Mix", "num": "32", "name": "Rózsaszín márvány"}, {"id": "m33", "type": "Mix", "num": "33", "name": "Púderrózsaszín"}, {"id": "m34", "type": "Mix", "num": "34", "name": "Lime hab"}, {"id": "m35", "type": "Mix", "num": "35", "name": "Szárított gyógynövény"}, {"id": "m36", "type": "Mix", "num": "36", "name": "Mohazöld"}, {"id": "m38", "type": "Mix", "num": "38", "name": "Olívaolaj"}, {"id": "m39", "type": "Mix", "num": "39", "name": "Mohabarna"}, {"id": "m40", "type": "Mix", "num": "40", "name": "Mély moha"}, {"id": "m41", "type": "Mix", "num": "41", "name": "Vad orchidea"}, {"id": "m42", "type": "Mix", "num": "42", "name": "Cayenne"}, {"id": "m43", "type": "Mix", "num": "43", "name": "Paprika"}, {"id": "m45", "type": "Mix", "num": "45", "name": "Tengerészkék"}, {"id": "u01", "type": "Uni Colour", "num": "01", "name": "Törtfehér"}, {"id": "u02", "type": "Uni Colour", "num": "02", "name": "Fekete"}, {"id": "u15", "type": "Uni Colour", "num": "15", "name": "Csokoládé"}, {"id": "u18", "type": "Uni Colour", "num": "18", "name": "Aranyvessző"}, {"id": "u24", "type": "Uni Colour", "num": "24", "name": "Magyalbogyó"}, {"id": "u27", "type": "Uni Colour", "num": "27", "name": "Púderkék"}, {"id": "u29", "type": "Uni Colour", "num": "29", "name": "Éjféli árnyék"}, {"id": "u37", "type": "Uni Colour", "num": "37", "name": "Sötét erdő"}, {"id": "u44", "type": "Uni Colour", "num": "44", "name": "Élénk piros"}];
-const KEY="saga-order-v2",OLD="saga-order-v1";
+const KEY="saga-slots-v3",V2="saga-order-v2";
 const ALL=DATA.map(d=>d.id);
 const byId=Object.fromEntries(DATA.map(d=>[d.id,d]));
-const grid=document.getElementById("grid"),buf=document.getElementById("buf");
+const SIZES={top:15,main:45,bot:15};
+const zones={top:document.getElementById("top"),main:document.getElementById("main"),bot:document.getElementById("bot")};
 const msg=document.getElementById("msg");
+
+function fresh(){
+  return {top:Array(15).fill(null),main:ALL.concat(Array(45-ALL.length).fill(null)).slice(0,45),bot:Array(15).fill(null)};
+}
+function pad(a,n){a=(a||[]).map(i=>byId[i]?i:null).slice(0,n);while(a.length<n)a.push(null);return a;}
 function load(){
   try{
     const s=JSON.parse(localStorage.getItem(KEY));
-    if(s&&Array.isArray(s.main)){
-      const b=(s.buf||[]).filter(i=>byId[i]);
-      const m=s.main.filter(i=>byId[i]&&!b.includes(i));
-      const rest=ALL.filter(i=>!m.includes(i)&&!b.includes(i));
-      return {main:m.concat(rest),buf:b};
+    if(s&&s.main){
+      const st={top:pad(s.top,15),main:pad(s.main,45),bot:pad(s.bot,15)};
+      const seen=new Set();
+      for(const z of ["top","main","bot"])st[z]=st[z].map(i=>{if(i&&seen.has(i))return null;if(i)seen.add(i);return i;});
+      for(const id of ALL)if(!seen.has(id)){
+        for(const z of ["main","bot","top"]){const k=st[z].indexOf(null);if(k>=0){st[z][k]=id;break;}}
+      }
+      return st;
     }
-    const o=JSON.parse(localStorage.getItem(OLD));
-    if(Array.isArray(o)){const m=o.filter(i=>byId[i]);return {main:m.concat(ALL.filter(i=>!m.includes(i))),buf:[]};}
+    const o=JSON.parse(localStorage.getItem(V2));
+    if(o&&Array.isArray(o.main)){
+      const st=fresh();const m=o.main.filter(i=>byId[i]);const b=(o.buf||[]).filter(i=>byId[i]);
+      st.main=pad(m,45);st.bot=pad(b,15);
+      const seen=new Set(m.concat(b));
+      ALL.filter(i=>!seen.has(i)).forEach(id=>{const k=st.main.indexOf(null);if(k>=0)st.main[k]=id;});
+      return st;
+    }
   }catch(e){}
-  return {main:ALL.slice(),buf:[]};
+  return fresh();
 }
-const ids=el=>[...el.children].map(c=>c.dataset.id);
-function save(){try{localStorage.setItem(KEY,JSON.stringify({main:ids(grid),buf:ids(buf)}));}catch(e){}}
-function numberCells(){[...grid.children].forEach((c,i)=>c.querySelector(".pos").textContent=i+1);}
-function cell(d){
+function makeCard(d){
   const el=document.createElement("div");el.className="c";el.dataset.id=d.id;
-  const img=document.createElement("img");img.loading="lazy";img.width=214;img.height=214;
+  const img=document.createElement("img");img.loading="lazy";img.width=214;img.height=214;img.draggable=false;
   img.src="https://nordfonal.cdn.shoprenter.hu/custom/nordfonal/image/cache/w214h214/product/saga/"+d.num+".jpg.webp";
   img.alt="DROPS Saga "+d.type+" "+d.num+" - "+d.name;
   const pos=document.createElement("span");pos.className="pos";
   const n=document.createElement("span");n.className="n";n.textContent=d.num;
-  const t=document.createElement("span");t.className="t";t.textContent=d.type;
-  el.append(img,pos,n,t);return el;
+  el.append(img,pos,n);
+  el.addEventListener("contextmenu",e=>e.preventDefault());
+  return el;
 }
 function render(st){
-  grid.innerHTML="";buf.innerHTML="";
-  st.main.forEach(i=>grid.appendChild(cell(byId[i])));
-  st.buf.forEach(i=>buf.appendChild(cell(byId[i])));
-  numberCells();
+  for(const z in zones){
+    zones[z].innerHTML="";
+    for(let i=0;i<SIZES[z];i++){
+      const slot=document.createElement("div");slot.className="slot";slot.dataset.zone=z;slot.dataset.idx=i;
+      if(z!=="main")slot.classList.add("nopos");
+      const id=st[z][i];if(id)slot.appendChild(makeCard(byId[id]));
+      zones[z].appendChild(slot);
+    }
+  }
+  decorate();
 }
+function decorate(){
+  zones.main.querySelectorAll(".slot").forEach(s=>{const c=s.querySelector(".c");if(c)c.querySelector(".pos").textContent=(+s.dataset.idx)+1;});
+}
+function snapshot(){
+  const st={};
+  for(const z in zones)st[z]=[...zones[z].children].map(s=>{const c=s.querySelector(".c");return c?c.dataset.id:null;});
+  return st;
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(snapshot()));}catch(e){}}
 render(load());
-const opts={group:"saga",animation:150,ghostClass:"ghost",chosenClass:"chosen",delay:120,delayOnTouchOnly:true,
-  onEnd(){numberCells();save();}};
-new Sortable(grid,opts);new Sortable(buf,opts);
+
+// ---- húzás ----
+let drag=null;
+function slotAt(x,y){const el=document.elementFromPoint(x,y);return el?el.closest(".slot"):null;}
+function setOver(slot){
+  if(drag.over===slot)return;
+  if(drag.over)drag.over.classList.remove("over");
+  drag.over=slot;if(slot)slot.classList.add("over");
+}
+function activate(){
+  if(!drag||drag.active)return;
+  drag.active=true;
+  document.body.classList.add("dragging");
+  const r=drag.card.getBoundingClientRect();
+  drag.w=r.width;drag.h=r.height;
+  const g=drag.card.cloneNode(true);g.classList.add("float");
+  g.style.width=r.width+"px";g.style.height=r.height+"px";
+  document.body.appendChild(g);drag.ghost=g;
+  drag.card.classList.add("src");
+  drag.timerScroll=setInterval(tick,16);
+  place();
+}
+function place(){
+  drag.ghost.style.left=(drag.x-drag.w/2)+"px";
+  drag.ghost.style.top=(drag.y-drag.h/2)+"px";
+  setOver(slotAt(drag.x,drag.y));
+}
+function tick(){
+  if(!drag||!drag.active)return;
+  const m=70;
+  if(drag.y<m)window.scrollBy(0,-14);
+  else if(drag.y>window.innerHeight-m)window.scrollBy(0,14);
+  setOver(slotAt(drag.x,drag.y));
+}
+function finish(drop){
+  if(!drag)return;
+  clearTimeout(drag.timer);clearInterval(drag.timerScroll);
+  if(drag.active){
+    const to=drag.over,from=drag.card.parentElement;
+    if(drop&&to&&to!==from){
+      const other=to.querySelector(".c");
+      if(other)from.appendChild(other);
+      to.appendChild(drag.card);
+      decorate();save();
+    }
+    if(drag.over)drag.over.classList.remove("over");
+    drag.ghost.remove();drag.card.classList.remove("src");
+    document.body.classList.remove("dragging");
+  }
+  drag=null;
+}
+document.addEventListener("pointerdown",e=>{
+  if(drag||(e.pointerType==="mouse"&&e.button!==0))return;
+  const card=e.target.closest(".c");if(!card||card.classList.contains("float"))return;
+  drag={card,x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,pid:e.pointerId,type:e.pointerType,active:false,over:null};
+  if(e.pointerType!=="mouse")drag.timer=setTimeout(activate,220);
+});
+document.addEventListener("pointermove",e=>{
+  if(!drag||e.pointerId!==drag.pid)return;
+  drag.x=e.clientX;drag.y=e.clientY;
+  if(!drag.active){
+    const moved=Math.hypot(drag.x-drag.x0,drag.y-drag.y0);
+    if(drag.type==="mouse"){if(moved>5)activate();}
+    else if(moved>10){finish(false);}
+    return;
+  }
+  place();
+});
+document.addEventListener("pointerup",e=>{if(drag&&e.pointerId===drag.pid)finish(true);});
+document.addEventListener("pointercancel",e=>{if(drag&&e.pointerId===drag.pid)finish(false);});
+document.addEventListener("touchmove",e=>{if(drag&&drag.active)e.preventDefault();},{passive:false});
+
+// ---- gombok ----
 function flash(t){msg.textContent=t;setTimeout(()=>msg.textContent="",2500);}
-document.getElementById("reset").onclick=()=>{render({main:ALL.slice(),buf:[]});save();flash("Visszaállítva");};
+document.getElementById("reset").onclick=()=>{render(fresh());save();flash("Visszaállítva");};
 document.getElementById("copy").onclick=async()=>{
-  const line=(id,i)=>(i+1)+". "+byId[id].type+" "+byId[id].num+" – "+byId[id].name;
-  let txt=ids(grid).map(line).join("\n");
-  const b=ids(buf);
-  if(b.length)txt+="\n\nPuffer:\n"+b.map(line).join("\n");
+  const st=snapshot();
+  const name=id=>{const d=byId[id];return d.type+" "+d.num+" – "+d.name;};
+  const list=(a,numbered)=>a.map((id,i)=>id?((numbered?(i+1)+". ":"• ")+name(id)):null).filter(Boolean).join("\n");
+  let txt=list(st.main,true);
+  if(st.top.some(Boolean))txt="Puffer (fent):\n"+list(st.top,false)+"\n\n"+txt;
+  if(st.bot.some(Boolean))txt+="\n\nPuffer (lent):\n"+list(st.bot,false);
   try{await navigator.clipboard.writeText(txt);flash("Kimásolva");}catch(e){flash("A másolás nem sikerült");}
 };
 </script></body></html>

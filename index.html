@@ -19,6 +19,9 @@ button:hover{border-color:var(--acc)}
 .pos{position:absolute;top:2px;left:2px;background:var(--bg);color:var(--fg);border:1px solid var(--line);font-size:clamp(7px,2vw,11px);padding:0 4px;border-radius:8px}
 .ghost{opacity:.35}
 .chosen{outline:2px solid var(--acc);outline-offset:-2px}
+#buf{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;align-content:start;min-height:calc(3*(20vw + 24px));margin:10px 0 0;border-top:2px dashed var(--line);background:repeating-linear-gradient(0deg,transparent 0,transparent calc(20vw + 23px),var(--line) calc(20vw + 23px),var(--line) calc(20vw + 24px))}
+.lbl{color:var(--mut);font-size:12px;padding:4px 6px 0}
+#buf .pos{display:none}
 </style></head><body>
 <h1>DROPS Saga</h1>
 <p class="s">100% gyapjú, 50 g / 100 m, 4 mm tű. Húzd a fonalakat a helyükre, a sorrend elmentődik.</p>
@@ -28,23 +31,32 @@ button:hover{border-color:var(--acc)}
 <span id="msg" role="status"></span>
 </div>
 <div id="grid"></div>
+<div class="lbl">Puffer – ide húzhatod át ideiglenesen a fonalakat</div>
+<div id="buf"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
 const DATA=[{"id": "m03", "type": "Mix", "num": "03", "name": "Nyír"}, {"id": "m04", "type": "Mix", "num": "04", "name": "Szürke suttogás"}, {"id": "m05", "type": "Mix", "num": "05", "name": "Kőszürke"}, {"id": "m06", "type": "Mix", "num": "06", "name": "Hamuszürke"}, {"id": "m07", "type": "Mix", "num": "07", "name": "Szén"}, {"id": "m08", "type": "Mix", "num": "08", "name": "Fagyos levendula"}, {"id": "m09", "type": "Mix", "num": "09", "name": "Búza"}, {"id": "m10", "type": "Mix", "num": "10", "name": "Bézs"}, {"id": "m11", "type": "Mix", "num": "11", "name": "Tollszürke"}, {"id": "m12", "type": "Mix", "num": "12", "name": "Nugát"}, {"id": "m13", "type": "Mix", "num": "13", "name": "Mandula"}, {"id": "m14", "type": "Mix", "num": "14", "name": "Téli kéreg"}, {"id": "m16", "type": "Mix", "num": "16", "name": "Kávé"}, {"id": "m17", "type": "Mix", "num": "17", "name": "Levendula szürke"}, {"id": "m19", "type": "Mix", "num": "19", "name": "Bíborvörös"}, {"id": "m20", "type": "Mix", "num": "20", "name": "Cseresznye dzsem"}, {"id": "m21", "type": "Mix", "num": "21", "name": "Szilvabor"}, {"id": "m22", "type": "Mix", "num": "22", "name": "Sötét szőlő"}, {"id": "m23", "type": "Mix", "num": "23", "name": "Rozsda"}, {"id": "m25", "type": "Mix", "num": "25", "name": "Mahagóni"}, {"id": "m26", "type": "Mix", "num": "26", "name": "Halvány menta"}, {"id": "m28", "type": "Mix", "num": "28", "name": "Kék kő"}, {"id": "m30", "type": "Mix", "num": "30", "name": "Viharkék"}, {"id": "m31", "type": "Mix", "num": "31", "name": "Sötét tengerészkék"}, {"id": "m32", "type": "Mix", "num": "32", "name": "Rózsaszín márvány"}, {"id": "m33", "type": "Mix", "num": "33", "name": "Púderrózsaszín"}, {"id": "m34", "type": "Mix", "num": "34", "name": "Lime hab"}, {"id": "m35", "type": "Mix", "num": "35", "name": "Szárított gyógynövény"}, {"id": "m36", "type": "Mix", "num": "36", "name": "Mohazöld"}, {"id": "m38", "type": "Mix", "num": "38", "name": "Olívaolaj"}, {"id": "m39", "type": "Mix", "num": "39", "name": "Mohabarna"}, {"id": "m40", "type": "Mix", "num": "40", "name": "Mély moha"}, {"id": "m41", "type": "Mix", "num": "41", "name": "Vad orchidea"}, {"id": "m42", "type": "Mix", "num": "42", "name": "Cayenne"}, {"id": "m43", "type": "Mix", "num": "43", "name": "Paprika"}, {"id": "m45", "type": "Mix", "num": "45", "name": "Tengerészkék"}, {"id": "u01", "type": "Uni Colour", "num": "01", "name": "Törtfehér"}, {"id": "u02", "type": "Uni Colour", "num": "02", "name": "Fekete"}, {"id": "u15", "type": "Uni Colour", "num": "15", "name": "Csokoládé"}, {"id": "u18", "type": "Uni Colour", "num": "18", "name": "Aranyvessző"}, {"id": "u24", "type": "Uni Colour", "num": "24", "name": "Magyalbogyó"}, {"id": "u27", "type": "Uni Colour", "num": "27", "name": "Púderkék"}, {"id": "u29", "type": "Uni Colour", "num": "29", "name": "Éjféli árnyék"}, {"id": "u37", "type": "Uni Colour", "num": "37", "name": "Sötét erdő"}, {"id": "u44", "type": "Uni Colour", "num": "44", "name": "Élénk piros"}];
-const KEY="saga-order-v1";
+const KEY="saga-order-v2",OLD="saga-order-v1";
+const ALL=DATA.map(d=>d.id);
 const byId=Object.fromEntries(DATA.map(d=>[d.id,d]));
-const grid=document.getElementById("grid");
+const grid=document.getElementById("grid"),buf=document.getElementById("buf");
 const msg=document.getElementById("msg");
-function loadOrder(){
-  try{const s=JSON.parse(localStorage.getItem(KEY));
-    if(Array.isArray(s)){const ok=s.filter(i=>byId[i]);const rest=DATA.map(d=>d.id).filter(i=>!ok.includes(i));return ok.concat(rest);}
+function load(){
+  try{
+    const s=JSON.parse(localStorage.getItem(KEY));
+    if(s&&Array.isArray(s.main)){
+      const b=(s.buf||[]).filter(i=>byId[i]);
+      const m=s.main.filter(i=>byId[i]&&!b.includes(i));
+      const rest=ALL.filter(i=>!m.includes(i)&&!b.includes(i));
+      return {main:m.concat(rest),buf:b};
+    }
+    const o=JSON.parse(localStorage.getItem(OLD));
+    if(Array.isArray(o)){const m=o.filter(i=>byId[i]);return {main:m.concat(ALL.filter(i=>!m.includes(i))),buf:[]};}
   }catch(e){}
-  return DATA.map(d=>d.id);
+  return {main:ALL.slice(),buf:[]};
 }
-function saveOrder(){
-  try{localStorage.setItem(KEY,JSON.stringify(currentOrder()));}catch(e){}
-}
-function currentOrder(){return [...grid.children].map(c=>c.dataset.id);}
+const ids=el=>[...el.children].map(c=>c.dataset.id);
+function save(){try{localStorage.setItem(KEY,JSON.stringify({main:ids(grid),buf:ids(buf)}));}catch(e){}}
 function numberCells(){[...grid.children].forEach((c,i)=>c.querySelector(".pos").textContent=i+1);}
 function cell(d){
   const el=document.createElement("div");el.className="c";el.dataset.id=d.id;
@@ -56,14 +68,23 @@ function cell(d){
   const t=document.createElement("span");t.className="t";t.textContent=d.type;
   el.append(img,pos,n,t);return el;
 }
-function render(order){grid.innerHTML="";order.forEach(i=>grid.appendChild(cell(byId[i])));numberCells();}
-render(loadOrder());
-new Sortable(grid,{animation:150,ghostClass:"ghost",chosenClass:"chosen",delay:120,delayOnTouchOnly:true,
-  onEnd(){numberCells();saveOrder();}});
+function render(st){
+  grid.innerHTML="";buf.innerHTML="";
+  st.main.forEach(i=>grid.appendChild(cell(byId[i])));
+  st.buf.forEach(i=>buf.appendChild(cell(byId[i])));
+  numberCells();
+}
+render(load());
+const opts={group:"saga",animation:150,ghostClass:"ghost",chosenClass:"chosen",delay:120,delayOnTouchOnly:true,
+  onEnd(){numberCells();save();}};
+new Sortable(grid,opts);new Sortable(buf,opts);
 function flash(t){msg.textContent=t;setTimeout(()=>msg.textContent="",2500);}
-document.getElementById("reset").onclick=()=>{render(DATA.map(d=>d.id));saveOrder();flash("Visszaállítva");};
+document.getElementById("reset").onclick=()=>{render({main:ALL.slice(),buf:[]});save();flash("Visszaállítva");};
 document.getElementById("copy").onclick=async()=>{
-  const txt=currentOrder().map((id,i)=>{const d=byId[id];return (i+1)+". "+d.type+" "+d.num+" – "+d.name;}).join("\n");
+  const line=(id,i)=>(i+1)+". "+byId[id].type+" "+byId[id].num+" – "+byId[id].name;
+  let txt=ids(grid).map(line).join("\n");
+  const b=ids(buf);
+  if(b.length)txt+="\n\nPuffer:\n"+b.map(line).join("\n");
   try{await navigator.clipboard.writeText(txt);flash("Kimásolva");}catch(e){flash("A másolás nem sikerült");}
 };
 </script></body></html>

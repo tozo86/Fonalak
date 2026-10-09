@@ -20,7 +20,7 @@ button:hover{border-color:var(--acc)}
 .c{position:absolute;inset:0;cursor:grab;background:var(--bg);text-align:center;overflow:hidden;
   user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .c img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--line);pointer-events:none}
-.n{display:block;padding:2px 1px 0;font-weight:bold;font-size:clamp(11px,3.2vw,16px);line-height:1.1}
+.n{display:block;padding:2px 1px 0;font-weight:bold;font-size:clamp(12px,3.6vw,18px);line-height:1.1}
 .pos{position:absolute;top:2px;left:2px;background:var(--bg);color:var(--fg);border:1px solid var(--line);font-size:clamp(7px,2vw,11px);padding:0 4px;border-radius:8px}
 .nopos .pos{display:none}
 .c.src{opacity:.3}
@@ -80,9 +80,8 @@ function makeCard(d){
   const img=document.createElement("img");img.loading="lazy";img.width=214;img.height=214;img.draggable=false;
   img.src="https://nordfonal.cdn.shoprenter.hu/custom/nordfonal/image/cache/w214h214/product/saga/"+d.num+".jpg.webp";
   img.alt="DROPS Saga "+d.type+" "+d.num+" - "+d.name;
-  const pos=document.createElement("span");pos.className="pos";
-  const n=document.createElement("span");n.className="n";n.textContent=d.num;
-  el.append(img,pos,n);
+    const n=document.createElement("span");n.className="n";n.textContent=d.num;
+  el.append(img,n);
   el.addEventListener("contextmenu",e=>e.preventDefault());
   return el;
 }
@@ -98,9 +97,7 @@ function render(st){
   }
   decorate();
 }
-function decorate(){
-  zones.main.querySelectorAll(".slot").forEach(s=>{const c=s.querySelector(".c");if(c)c.querySelector(".pos").textContent=(+s.dataset.idx)+1;});
-}
+function decorate(){}
 function snapshot(){
   const st={};
   for(const z in zones)st[z]=[...zones[z].children].map(s=>{const c=s.querySelector(".c");return c?c.dataset.id:null;});
